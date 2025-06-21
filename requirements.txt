@@ -1,0 +1,5 @@
+fastapi[standard]==0.115.12
+psycopg2-binary==2.9.9
+pydantic_settings==2.7.1
+sqlmodel==0.0.22
+uvicorn[standard]==0.34.2
