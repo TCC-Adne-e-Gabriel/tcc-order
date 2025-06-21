@@ -50,7 +50,6 @@ async def create_order(
     for item_data in products_list:
         if not isinstance(item_data, dict):
             raise HTTPException(status_code=400, detail="Product information is not as expected.")
-        product_id_str = item_data.get("product_id")
         quantity = item_data.get("quantity")
         unit_price = item_data.get("unit_price")
 
@@ -199,6 +198,7 @@ async def update_order(
                 item["unit_price"],
             )
             cursor.execute(insert_order_product_query, order_product_values)
+
     conn.commit()
 
     body["id"]=order_id,
