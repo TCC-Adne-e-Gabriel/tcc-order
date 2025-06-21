@@ -199,7 +199,6 @@ async def update_order(
                 item["unit_price"],
             )
             cursor.execute(insert_order_product_query, order_product_values)
-        
     conn.commit()
 
     body["id"]=order_id,
