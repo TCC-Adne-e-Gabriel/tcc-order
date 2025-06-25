@@ -11,3 +11,6 @@ class PaymentNotFoundException(Exception):
 
 class OrderNotFoundException(Exception): 
     pass
+
+class ProductNotFoundException(Exception): 
+    pass

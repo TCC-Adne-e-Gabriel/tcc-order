@@ -1,7 +1,7 @@
 from sqlmodel import Session, create_engine
 import logging
 from app.core.settings import settings
-from app.models.order import Orders
+from app.models.order import Order
 from app.models.payment import Payment
 
 logging.basicConfig(level=logging.INFO)

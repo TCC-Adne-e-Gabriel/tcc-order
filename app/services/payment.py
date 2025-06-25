@@ -4,21 +4,23 @@ from sqlmodel import Session, select
 from app.core.encrypt import encrypt_data
 from uuid import UUID
 from app.services.order import OrderService
-from clients.customer_client import CustomerClient
-from exceptions import *
+from app.clients.customer_client import CustomerClient
+from app.exceptions import *
 
 class PaymentService():
     def __init__(self):
         self.customer_client = CustomerClient()
         self.order_service = OrderService()
 
-    def create_payment(self, session: Session, order: PaymentCreateRequest) -> PaymentResponse:
-        order_data = order.model_dump()
-        db_order = Payment(**order_data)
-        session.add(db_order)
+    async def create_payment(self, session: Session, payment: PaymentCreateRequest) -> PaymentResponse:
+        await self.customer_client.get_user_by_id(payment.customer_id)
+        self.order_service.get_order_by_id(session=session, order_id=payment.order_id)
+        payment_data = payment.model_dump()
+        db_payment = Payment(**payment_data)
+        session.add(db_payment)
         session.commit()
-        session.refresh(db_order)
-        return db_order
+        session.refresh(db_payment)
+        return db_payment
 
     def update_payment(self, session: Session, payment: PaymentUpdateRequest, current_payment: Payment):
         payment_db = payment.model_dump(exclude_none=True)
@@ -44,7 +46,7 @@ class PaymentService():
         statement = select(Payment).where(Payment.order_id == order_id)
         return session.exec(statement).all()
 
-    def get_payments(self, session: Session, customer_id: UUID) -> PaymentResponse: 
+    def get_payments(self, session: Session) -> PaymentResponse: 
         statement = select(Payment)
         return session.exec(statement).all()
 

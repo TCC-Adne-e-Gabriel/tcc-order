@@ -1,5 +1,4 @@
 from uuid import UUID, uuid4
-from order import Order
 from datetime import datetime, timezone
 from sqlmodel import (
     SQLModel, 
@@ -21,4 +20,4 @@ class Payment(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
-    order: Order = Relationship(back_populates="payments")
+    order: "Order" = Relationship(back_populates="payments")
