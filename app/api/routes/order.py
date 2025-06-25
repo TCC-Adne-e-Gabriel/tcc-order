@@ -6,48 +6,46 @@ from app.core.encrypt import encrypt_data
 from app.core.db import get_db_conn
 from typing import Any
 from datetime import datetime
-from app.models.order import OrderStatusEnum, OrderStatusUpdate
+from app.schemas.order import OrderCreateRequest, OrderStatusUpdate, OrderResponse, Message
+from app.models.order import OrderStatusEnum
+from app.deps import SessionDep
+from app.services.order import OrderService
+from exceptions import OrderNotFound
+from http import HTTPStatus
+
 
 app = FastAPI()
 router = APIRouter(prefix="/order")
+order_service = OrderService()
 
 @router.get("/{id}/")
-def get_order_by_id(id, conn=Depends(get_db_conn)) -> Any:
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM orders WHERE orders.id = '"+ id + "'")
-    order = cursor.fetchone()    
-    cursor.close()
-    return {"order": order}
+def get_order_by_id(
+    id: UUID, 
+    session: SessionDep
+) -> OrderResponse:
+    try: 
+        order = order_service.get_order_by_id(session=session, order_id=id)
+    except OrderNotFound as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
+    return order
 
 
 @router.get("/")
-def get_orders(id, conn=Depends(get_db_conn)) -> Any:
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM orders")
-    order = cursor.fetchall()
-    cursor.close()
-    return {"order": order}
+def get_orders(
+    session: SessionDep
+) -> List[OrderResponse]:
+    orders = order_service.get_orders(session)
+    return orders
 
 
 @router.post("/", status_code=201)
 async def create_order(
-    request: Request,
+    order_request: OrderCreateRequest,
     conn=Depends(get_db_conn)
-):
-    body = await request.json()
+) -> OrderResponse:
     total_price = 0
-    customer_id_str = body.get("customer_id")
-    freight = body.get("freight")
-    products_list = body.get("products", [])
 
-    if not customer_id_str:
-        raise HTTPException(status_code=400, detail="Customer ID is required.")
-    if not isinstance(freight, (int, float)):
-        raise HTTPException(status_code=400, detail="freigth is required")
-
-    customer_id = UUID(customer_id_str)
-    
-    for item_data in products_list:
+    for item_data in order_request.products:
         if not isinstance(item_data, dict):
             raise HTTPException(status_code=400, detail="Product information is not as expected.")
         quantity = item_data.get("quantity")
@@ -211,38 +209,26 @@ async def update_order(
     return body
     
 @router.delete("/{id}/")
-def delete_order(id, conn=Depends(get_db_conn)) -> Any:
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM orders WHERE id = '" + id + "'")
-    conn.commit()
-
-    if cursor.rowcount == 0:
-        cursor.close()
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    cursor.close()
-    return {"message": "Order deleted successfully"}
-
+def delete_order(
+    id, 
+    session: SessionDep
+) -> Message:
+    try: 
+        order_service.delete_order(session=session, order_id=id)
+    except OrderNotFound as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
+    
+    return Message(message="Order deleted successfully")
 
 @router.patch("/{id}/status/")
 def update_status(
     id,
     status_request: OrderStatusUpdate,
-    conn=Depends(get_db_conn),     
-):
+    session: SessionDep
+) -> OrderResponse:
+    try: 
+        order = order_service.update_order_status(status_request)
+    except OrderNotFound as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
+    return order
     
-    cursor = conn.cursor()
-    try:
-        update_query = f"""
-            UPDATE orders
-            SET status = '{status_request}', updated_at = {datetime.now()}
-            WHERE id = {id};
-        """
-        cursor.execute(update_query)
-        cursor.close()
-
-    except: 
-        raise HTTPException(status_code=400, detail="Failed update status")
-
-    return { "message": "Status updated successfully"}

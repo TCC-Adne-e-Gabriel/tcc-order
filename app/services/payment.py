@@ -1,0 +1,57 @@
+from app.models.payment import Payment
+from app.schemas.payment import PaymentCreateRequest, PaymentResponse, PaymentUpdateRequest
+from sqlmodel import Session, select
+from app.core.encrypt import encrypt_data
+from uuid import UUID
+from app.services.order import OrderService
+from clients.customer_client import CustomerClient
+from exceptions import *
+
+class PaymentService():
+    def __init__(self):
+        self.customer_client = CustomerClient()
+        self.order_service = OrderService()
+
+    def create_payment(self, session: Session, order: PaymentCreateRequest) -> PaymentResponse:
+        order_data = order.model_dump()
+        db_order = Payment(**order_data)
+        session.add(db_order)
+        session.commit()
+        session.refresh(db_order)
+        return db_order
+
+    def update_payment(self, session: Session, payment: PaymentUpdateRequest, current_payment: Payment):
+        payment_db = payment.model_dump(exclude_none=True)
+        current_payment.sqlmodel_update(payment_db)
+        session.add(current_payment)
+        session.commit()
+        session.refresh(current_payment)
+        return current_payment
+
+    def get_payment_from_id(self, session: Session, payment_id: UUID) -> PaymentResponse: 
+        statement = select(Payment).where(Payment.payment_id == payment_id)
+        payment = session.exec(statement).first()
+        if not payment:
+            raise PaymentNotFoundException
+        return payment
+    
+    async def get_payments_from_customer(self, session: Session, customer_id: UUID) -> PaymentResponse: 
+        await self.customer_client.get_user_by_id(str(customer_id))
+        statement = select(Payment).where(Payment.customer_id == customer_id)
+
+    def get_payments_from_order(self, session: Session, order_id: UUID) -> PaymentResponse: 
+        self.order_service.get_order_by_id(session=session, order_id=order_id)
+        statement = select(Payment).where(Payment.order_id == order_id)
+        return session.exec(statement).all()
+
+    def get_payments(self, session: Session, customer_id: UUID) -> PaymentResponse: 
+        statement = select(Payment)
+        return session.exec(statement).all()
+
+    def delete_payment(self, session: Session, payment_id: UUID): 
+        current_payment = self.get_payment_from_id(session, payment_id)
+        session.delete(current_payment)
+        session.commit()
+    
+
+
