@@ -20,17 +20,27 @@ class Order(SQLModel, table=True):
     freight: float
     status: OrderStatusEnum
     total_price: float
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=False
+    )
 
     products: List["OrderProduct"] = Relationship(back_populates="order")
     payments: List["Payment"] = Relationship(back_populates="order")
 
 
 class OrderProduct(SQLModel, table=True):
-    order_id: UUID = Field(foreign_key="orders.id", primary_key=True)
+    order_id: UUID = Field(
+        foreign_key="orders.id", 
+        primary_key=True
+    )
     product_id: UUID = Field(primary_key=True)
     quantity: float
     unit_price: float
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), 
+        nullable=False
+    )
     order: Optional[Order] = Relationship(back_populates="products")

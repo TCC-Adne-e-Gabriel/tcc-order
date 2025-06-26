@@ -38,6 +38,14 @@ class OrderUpdateRequest(BaseModel):
     status: Optional[OrderStatusEnum] = None
     total_price: Optional[Annotated[Decimal, AfterValidator(greater_than_zero)]] = None
 
+class OrderSimpleResponse(OrderCreateRequest): 
+    id: UUID 
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class OrderResponse(OrderCreateRequest): 
     id: UUID 
     created_at: datetime

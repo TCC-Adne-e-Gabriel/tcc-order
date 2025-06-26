@@ -14,3 +14,6 @@ class OrderNotFoundException(Exception):
 
 class ProductNotFoundException(Exception): 
     pass
+
+class OrderProductException(Exception):
+    pass

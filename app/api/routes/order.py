@@ -1,38 +1,69 @@
 from fastapi import FastAPI
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException
 from typing import List
-from uuid import UUID, uuid4
-from datetime import datetime
-from app.schemas.order import OrderCreateRequest, OrderStatusUpdate, OrderResponse, Message, OrderUpdateRequest
+from uuid import UUID
+from app.schemas.order import (
+    OrderCreateRequest, 
+    OrderStatusUpdate, 
+    OrderResponse, 
+    Message, 
+    OrderUpdateRequest, 
+    OrderSimpleResponse
+)
 from app.deps import SessionDep
 from app.services.order import OrderService
-from app.exceptions import OrderNotFound, ProductNotFoundException
+from app.exceptions import OrderNotFound, ProductNotFoundException, UserNotFoundException
 from http import HTTPStatus
+from app.services.payment import PaymentService
 
 
 app = FastAPI()
 router = APIRouter(prefix="/order")
 order_service = OrderService()
+payment_service = PaymentService()
 
 @router.get("/{id}/")
-def get_order_by_id(
+async def get_order_by_id(
     id: UUID, 
     session: SessionDep
 ) -> OrderResponse:
     try: 
-        order = order_service.get_order_by_id(session=session, order_id=id)
+        order = await order_service.read_order_by_id(session=session, order_id=id)
     except OrderNotFound as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
     return order
 
+@router.get("/{id}/payments")
+def get_order_payments(
+    id: UUID, 
+    session: SessionDep
+) -> OrderResponse:
+    try: 
+        order = payment_service.read_payments_from_order(
+            session=session, 
+            order_id=id
+        )
+    except OrderNotFound as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
+    return order
 
 @router.get("/")
-def get_orders(
+async def get_orders(
     session: SessionDep
 ) -> List[OrderResponse]:
-    orders = order_service.get_orders(session)
+    orders = await order_service.read_orders(session)
     return orders
 
+@router.get("/me/{id}")
+async def get_orders_customer(
+    id: UUID,
+    session: SessionDep
+) -> List[OrderResponse]:
+    try:
+        orders = await order_service.read_orders_from_customer(session=session, customer_id=id)
+        return orders
+    except UserNotFoundException as e: 
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="User not found")
 
 @router.post("/", status_code=201)
 async def create_order(
@@ -44,7 +75,6 @@ async def create_order(
         return order
     except ProductNotFoundException as e: 
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Product not found")
-
 
 @router.patch("/{order_id}/")
 async def update_order(
@@ -58,6 +88,17 @@ async def update_order(
     except OrderNotFound as e: 
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
 
+@router.patch("/{id}/status/")
+def update_status(
+    id,
+    status_request: OrderStatusUpdate,
+    session: SessionDep
+) -> OrderSimpleResponse:
+    try: 
+        order = order_service.update_order_status(session=session, status_update=status_request, order_id=id)
+        return order
+    except OrderNotFound as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
     
 @router.delete("/{id}/")
 def delete_order(
@@ -69,17 +110,3 @@ def delete_order(
         return Message(message="Order deleted successfully")
     except OrderNotFound as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
-    
-
-@router.patch("/{id}/status/")
-def update_status(
-    id,
-    status_request: OrderStatusUpdate,
-    session: SessionDep
-) -> OrderResponse:
-    try: 
-        order = order_service.update_order_status(session=session, status_update=status_request, order_id=id)
-        return order
-    except OrderNotFound as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
-    

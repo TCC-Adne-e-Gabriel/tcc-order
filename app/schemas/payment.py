@@ -27,15 +27,15 @@ class PaymentCreateRequest(BaseModel):
     total_amount: Annotated[Decimal, AfterValidator(greater_than_zero)]
     
 class PaymentUpdateRequest(BaseModel): 
-    payment_method: Optional[PaymentMethodEnum]
-    order_id: Optional[UUID]
-    status: Optional[PaymentStatusEnum] = "pending"
+    payment_method: Optional[PaymentMethodEnum] = None
+    order_id: Optional[UUID] = None
+    status: Optional[PaymentStatusEnum] = None
     paid_at: Optional[datetime] = None
-    customer_id: Optional[UUID]
-    number_of_installments: int = 1
-    total_amount: Annotated[Optional[Decimal], AfterValidator(greater_than_zero)]
+    customer_id: Optional[UUID] = None
+    number_of_installments: int = None
+    total_amount: Optional[Annotated[Decimal, AfterValidator(greater_than_zero)]] = None
 
-class PaymentResponse(BaseModel): 
+class PaymentResponse(PaymentCreateRequest): 
     id: UUID 
     created_at: datetime
     updated_at: datetime

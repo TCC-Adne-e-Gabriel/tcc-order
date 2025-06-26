@@ -1,9 +1,16 @@
 from app.models.order import Order, OrderProduct
-from app.schemas.order import OrderCreateRequest, OrderResponse, OrderUpdateRequest, OrderStatusUpdate, Product
+from app.schemas.order import (
+    OrderCreateRequest, 
+    OrderResponse, 
+    OrderUpdateRequest, 
+    OrderStatusUpdate, 
+    Product, 
+    OrderSimpleResponse
+)
 from sqlmodel import Session, select
 from typing import List
 from uuid import UUID
-from app.exceptions import OrderNotFound
+from app.exceptions import OrderNotFound, OrderProductException
 from app.clients.customer_client import CustomerClient
 from app.clients.product_client import ProductClient
 
@@ -18,11 +25,11 @@ class OrderService():
         order_products = []
         products = []
         for item in order.products:
-            product: Product = await self.product_client.get_product_by_id(item.product_id, item.quantity)
+            product: Product = await self.product_client.fetch_product(item.product_id, item.quantity)
             total_price += product.price * item.quantity
             products.append(product)
             order_product = OrderProduct(
-                product_id=product.id,
+                product_id=product.id, 
                 quantity=item.quantity,
                 unit_price=product.price
             )
@@ -37,45 +44,65 @@ class OrderService():
         session.refresh(db_order)
         return OrderResponse.from_order(db_order, products)
     
-    async def get_products_from_order(self, current_order: Order) -> List[Product]:
+    async def read_products_from_order(self, current_order: Order) -> List[Product]:
         products = []
         for item in current_order.products: 
-            product: Product = await self.product_client.get_product_by_id(item.product_id, item.quantity)
+            product: Product = await self.product_client.fetch_product(item.product_id, item.quantity)
             products.append(product)
         return products
 
     async def update_order(self, session: Session, order: OrderUpdateRequest, order_id: UUID):
-        current_order = self.get_order_by_id(session, order_id)
-        products = await self.get_products_from_order(current_order=current_order)
+        current_order = self.get_by_id(session, order_id)
+        products = await self.read_products_from_order(current_order=current_order)
         order_db = order.model_dump(exclude_none=True)
         current_order.sqlmodel_update(order_db)
         session.add(current_order)
         session.commit()
         session.refresh(current_order)
         return OrderResponse.from_order(current_order, products)
+    
+    async def to_response_schema(self, orders) -> List[OrderResponse]: 
+        orders_response = []
 
-    def get_orders_from_customer(self, customer_id: UUID) -> List[OrderResponse]: 
-        self.customer_client.get_user_by_id(str(customer_id))
-        return select(Order).where(Order.customer_id == customer_id)
+        for order in orders:
+            products =  await self.read_products_from_order(order)
+            orders_response.append(OrderResponse.from_order(order, products))
+        return orders_response
 
-    def get_order_by_id(self, session: Session, order_id: UUID) -> Order: 
+    async def read_customer_orders(self, session: Session, customer_id: UUID) -> List[OrderResponse]: 
+        await self.customer_client.read_user_by_id(str(customer_id))
+        orders = session.exec(select(Order).where(Order.customer_id == customer_id))
+        return await self.to_response_schema(orders)
+
+    def get_by_id(self, session: Session, order_id: UUID) -> Order: 
         statement = select(Order).where(Order.id == order_id)
-        order = session.exec(statement).first()
+        return session.exec(statement).first()
+
+    async def read_order_by_id(self, session: Session, order_id: UUID) -> OrderResponse: 
+        order = self.get_by_id(session, order_id)
+        products = await self.read_products_from_order(order)
         if not order:
             raise OrderNotFound
-        return order
+        return OrderResponse.from_order(order, products)
 
-    def get_orders(self, session: Session) -> List[OrderResponse]: 
-        statement = select(Order).where(Order)
-        return session.exec(statement).all()
+    async def read_orders(self, session: Session) -> List[OrderResponse]: 
+        statement = select(Order)
+        orders = session.exec(statement)
+        return await self.to_response_schema(orders)
 
     def delete_order(self, session: Session, order_id):
-        current_order = self.get_order_by_id(session=session, order_id=order_id) 
+        current_order = self.get_by_id(session=session, order_id=order_id) 
+        statement = select(OrderProduct).where(OrderProduct.order_id == order_id)
+        order_products = session.exec(statement).all()
+        
+        for item in order_products: 
+            session.delete(item)
+
         session.delete(current_order)
         session.commit()
 
-    def update_order_status(self, session: Session, status_update: OrderStatusUpdate, order_id: UUID):
-        current_order = self.get_order_by_id(session, order_id)
+    def update_order_status(self, session: Session, status_update: OrderStatusUpdate, order_id: UUID) -> OrderSimpleResponse:
+        current_order = self.get_by_id(session, order_id)
         order_db = OrderStatusUpdate(status=status_update.status).model_dump()
         current_order.sqlmodel_update(order_db)
         session.add(current_order)

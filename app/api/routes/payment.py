@@ -4,8 +4,8 @@ from app.services.payment_mock import PaymentMockService
 from uuid import UUID, uuid4
 from typing import List
 from app.services.payment import PaymentService
-from app.exceptions import PaymentNotFoundException
-from app.schemas.payment import PaymentResponse
+from app.exceptions import PaymentNotFoundException, UserNotFoundException, OrderNotFound
+from app.schemas.payment import PaymentResponse, PaymentCreateRequest, PaymentUpdateRequest
 from app.models.payment import PaymentStatusEnum, PaymentMethodEnum
 from app.deps import SessionDep
 from http import HTTPStatus
@@ -21,88 +21,63 @@ def get_payment_by_id(
     session: SessionDep
 ) -> PaymentResponse:
     try: 
-        payment_service.get_payment_from_id(session, id)
+        return payment_service.read_payment_from_id(session, id)
     except PaymentNotFoundException as e: 
-        raise HTTPException(HTTPStatus.NOT_FOUND)
+        raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
 
 @router.get("/")
 def get_payments(
     session: SessionDep
 ) -> List[PaymentResponse]:
-    payments = payment_service.get_payments(session)
+    payments = payment_service.read_payments(session)
     return payments
 
-# @router.post("/", status_code=201)
-# async def create_payment(
-#     request: Request,
-#     conn=Depends(get_db_conn)
-# ) -> Any: 
-    
-#     body = await request.json()
-#     cursor = conn.cursor()
-#     payment_id = uuid4()
-#     date_now = datetime.now()
-#     status = payment_mock.mock_payment(body["payment_method"])
+@router.post("/", status_code=201)
+async def create_payment(
+    payment_request: PaymentCreateRequest,
+    session: SessionDep
+) -> PaymentResponse: 
+    try: 
+        payment = await payment_service.create_payment(
+            session=session, 
+            payment=payment_request
+        )
+        return payment
+    except OrderNotFound as e:
+        raise HTTPException(HTTPStatus.NOT_FOUND, detail="Order not found")
+    except UserNotFoundException as e:
+        raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
 
-#     query = """
-#         INSERT INTO payment (id, created_at, updated_at, payment_method, status, order_id, paid_at, customer_id, number_of_installments, total_amount)
-#         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
-#     """
-#     values = (
-#         str(payment_id),
-#         date_now,
-#         date_now,
-#         body["payment_method"], 
-#         status,
-#         str(body["order_id"]),
-#         (date_now if status == PaymentStatusEnum.paid else None),
-#         str(body["customer_id"]),
-#         body["number_of_installments"], 
-#         body["total_amount"]
-#     )
-            
-#     body["id"] = payment_id
-#     body["created_at"] = date_now
-#     body["updated_at"] = date_now
-#     body["paid_at"] = date_now if status == PaymentStatusEnum.paid else None
-#     body["status"] = status
-#     if body["payment_method"] == PaymentMethodEnum.boleto:
-#         body["barcode"] = payment_mock.mock_barcode()
-#     cursor.execute(query, values)
-#     conn.commit()
-#     cursor.close()
-#     return body
 
-# @router.patch("/{id}/confirm/")
-# async def confirm_payment(
-#     id,
-#     password_request: Request,
-#     conn=Depends(get_db_conn),     
-# ):
-#     password_request = await password_request.json()
-#     cursor = conn.cursor()
-#     cursor.execute(f"UPDATE payment SET status ='{PaymentStatusEnum.paid}' WHERE id = '{id}'")
-#     conn.commit()
-#     cursor.close()
-#     if cursor.rowcount == 0:
-#         cursor.close()
-#         raise HTTPException(status_code=404, detail="Payment not found")
+@router.patch("/{id}/confirm/")
+async def confirm_payment(
+    id,
+    session: SessionDep
+) -> PaymentResponse:
+    try:
+        new_status = PaymentUpdateRequest(status=PaymentStatusEnum.paid)
+        return payment_service.update_payment(session=session, payment=new_status, payment_id=id)
+    except PaymentNotFoundException as e:
+        raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
     
-#     return { "message": "Payment paid successfully"}
-
-# @router.patch("/{id}/cancel/")
-# async def cancel_payment(
-#     id,
-#     password_request: Request,
-#     conn=Depends(get_db_conn),     
-# ):
-#     password_request = await password_request.json()
-#     cursor = conn.cursor()
-#     cursor.execute(f"UPDATE payment SET status ='{PaymentStatusEnum.cancelled}' WHERE id = '{id}'")
-#     conn.commit()
-#     cursor.close()
-#     if cursor.rowcount == 0:
-#         cursor.close()
-#         raise HTTPException(status_code=404, detail="Payment not found")
+@router.patch("/{id}/cancel/")
+async def confirm_payment(
+    id: UUID,
+    session: SessionDep
+) -> PaymentResponse:
+    try:
+        new_status = PaymentUpdateRequest(status=PaymentStatusEnum.cancelled)
+        return payment_service.update_payment(session=session, payment=new_status, payment_id=id)
+    except PaymentNotFoundException as e:
+        raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
     
-#     return { "message": "Payment cancelled successfully"}
+@router.get("/order/{order_id}/")
+async def get_payments_from_order(
+    order_id: UUID,
+    session: SessionDep
+):
+    try:
+        return payment_service.read_order_payments(session=session, order_id=order_id)
+    except OrderNotFound as e:
+        raise HTTPException(HTTPStatus.NOT_FOUND, detail="Order not found")
+    
