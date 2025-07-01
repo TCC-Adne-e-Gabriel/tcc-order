@@ -22,7 +22,6 @@ class PaymentCreateRequest(BaseModel):
     order_id: UUID
     status: PaymentStatusEnum = "pending"
     paid_at: Optional[datetime] = None
-    customer_id: UUID
     number_of_installments: int = 1
     total_amount: Annotated[Decimal, AfterValidator(greater_than_zero)]
     

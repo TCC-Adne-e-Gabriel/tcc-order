@@ -27,7 +27,6 @@ class OrderStatusUpdate(BaseModel):
     status: OrderStatusEnum
 
 class OrderCreateRequest(BaseModel): 
-    customer_id: UUID
     freight: Decimal
     products: List[ProductOrder]
     status: Optional[OrderStatusEnum] = "pending"

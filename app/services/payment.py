@@ -10,16 +10,19 @@ from uuid import UUID
 from app.services.order import OrderService
 from app.clients.customer_client import CustomerClient
 from app.exceptions import *
+from http import HTTPStatus
+
 
 class PaymentService():
     def __init__(self):
         self.customer_client = CustomerClient()
         self.order_service = OrderService()
 
-    async def create_payment(self, session: Session, payment: PaymentCreateRequest) -> PaymentResponse:
-        await self.customer_client.fetch_user(payment.customer_id)
+    async def create_payment(self, session: Session, payment: PaymentCreateRequest, customer_id: UUID) -> PaymentResponse:
+        await self.customer_client.fetch_user(customer_id)
         self.order_service.read_order_by_id(session=session, order_id=payment.order_id)
         payment_data = payment.model_dump()
+        payment_data["customer_id"] = customer_id
         db_payment = Payment(**payment_data)
         session.add(db_payment)
         session.commit()
@@ -42,12 +45,13 @@ class PaymentService():
         statement = select(Payment).where(Payment.id == payment_id)
         payment = session.exec(statement).first()
         if not payment:
-            raise PaymentNotFoundException
+            raise PaymentNotFoundException(status_code=HTTPStatus.NOT_FOUND, detail="Payment not found")
         return payment
     
     async def read_customer_payments(self, session: Session, customer_id: UUID) -> PaymentResponse: 
         await self.customer_client.fetch_user(str(customer_id))
         statement = select(Payment).where(Payment.customer_id == customer_id)
+        return session.exec(statement).all()
 
     def read_order_payments(self, session: Session, order_id: UUID) -> PaymentResponse: 
         self.order_service.read_order_by_id(session=session, order_id=order_id)

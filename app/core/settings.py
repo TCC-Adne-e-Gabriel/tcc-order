@@ -18,13 +18,17 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["dev", "prod"] = "dev"
 
     POSTGRES_SERVER: str
-    POSTGRES_PORT: int = 5432
+    POSTGRES_PORT: int = 5434
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+    CUSTOMER_API_KEY: str = ""
+    SECRET_KEY: str = ""
+    ALGORITHM: str = ""
+    ACCESS_TOKEN_EXPIRE_DAYS: int
+    CUSTOMER_API_KEY: str = ""
     CUSTOMER_API: str = ""
     PRODUCT_API: str = ""
-
 
     @computed_field
     @property

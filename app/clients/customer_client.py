@@ -10,5 +10,5 @@ class CustomerClient():
         async with httpx.AsyncClient() as client:   
             response = await client.get(settings.CUSTOMER_API + f"/customer/{customer_id}")
             if(response.status_code == HTTPStatus.NOT_FOUND):
-                raise UserNotFoundException()
+                raise UserNotFoundException(HTTPStatus.NOT_FOUND, detail="Payment not found")
             return response.json()
