@@ -5,24 +5,22 @@ from app.schemas.payment import (
     PaymentUpdateRequest
 )
 from sqlmodel import Session, select
-from app.core.encrypt import encrypt_data
 from uuid import UUID
 from app.services.order import OrderService
 from app.clients.customer_client import CustomerClient
-from app.exceptions import *
-from http import HTTPStatus
-
+from app.exceptions import (
+    PaymentNotFoundException
+)
 
 class PaymentService():
     def __init__(self):
         self.customer_client = CustomerClient()
         self.order_service = OrderService()
 
-    async def create_payment(self, session: Session, payment: PaymentCreateRequest, customer_id: UUID) -> PaymentResponse:
-        await self.customer_client.fetch_user(customer_id)
+    async def create_payment(self, session: Session, payment: PaymentCreateRequest) -> PaymentResponse:
+        await self.customer_client.fetch_user(payment.customer_id)
         self.order_service.read_order_by_id(session=session, order_id=payment.order_id)
         payment_data = payment.model_dump()
-        payment_data["customer_id"] = customer_id
         db_payment = Payment(**payment_data)
         session.add(db_payment)
         session.commit()

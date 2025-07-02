@@ -29,7 +29,7 @@ class OrderStatusUpdate(BaseModel):
 class OrderCreateRequest(BaseModel): 
     freight: Decimal
     products: List[ProductOrder]
-    status: Optional[OrderStatusEnum] = "pending"
+    status: Optional[OrderStatusEnum] = OrderStatusEnum.PENDING
 
 class OrderUpdateRequest(BaseModel): 
     customer_id: Optional[UUID] = None
