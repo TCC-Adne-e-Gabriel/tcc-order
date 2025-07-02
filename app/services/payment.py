@@ -50,6 +50,7 @@ class PaymentService():
     async def read_customer_payments(self, session: Session, customer_id: UUID) -> PaymentResponse: 
         await self.customer_client.fetch_user(str(customer_id))
         statement = select(Payment).where(Payment.customer_id == customer_id)
+        return session.exec(statement).all()
 
     def read_order_payments(self, session: Session, order_id: UUID) -> PaymentResponse: 
         self.order_service.read_order_by_id(session=session, order_id=order_id)
