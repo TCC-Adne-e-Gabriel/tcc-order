@@ -83,7 +83,7 @@ class OrderService():
         order = self.get_by_id(session, order_id)
         products = await self.read_products_from_order(order)
         if not order:
-            raise OrderNotFound(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
+            raise OrderNotFound
         return OrderResponse.from_order(order, products)
 
     async def read_orders(self, session: Session) -> List[OrderResponse]: 

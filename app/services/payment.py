@@ -45,7 +45,7 @@ class PaymentService():
         statement = select(Payment).where(Payment.id == payment_id)
         payment = session.exec(statement).first()
         if not payment:
-            raise PaymentNotFoundException(status_code=HTTPStatus.NOT_FOUND, detail="Payment not found")
+            raise PaymentNotFoundException
         return payment
     
     async def read_customer_payments(self, session: Session, customer_id: UUID) -> PaymentResponse: 
