@@ -20,7 +20,7 @@ class PaymentStatusEnum(str, Enum):
 class PaymentCreateRequest(BaseModel): 
     payment_method: PaymentMethodEnum
     order_id: UUID
-    status: PaymentStatusEnum = "pending"
+    status: PaymentStatusEnum = PaymentStatusEnum.pending
     paid_at: Optional[datetime] = None
     customer_id: UUID
     number_of_installments: int = 1
@@ -32,7 +32,7 @@ class PaymentUpdateRequest(BaseModel):
     status: Optional[PaymentStatusEnum] = None
     paid_at: Optional[datetime] = None
     customer_id: Optional[UUID] = None
-    number_of_installments: int = None
+    number_of_installments: Optional[int] = None
     total_amount: Optional[Annotated[Decimal, AfterValidator(greater_than_zero)]] = None
 
 class PaymentResponse(PaymentCreateRequest): 
