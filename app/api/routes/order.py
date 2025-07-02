@@ -29,7 +29,7 @@ async def get_order_by_id(
 ) -> OrderResponse:
     try: 
         order = await order_service.read_order_by_id(session=session, order_id=id)
-    except OrderNotFound as e:
+    except OrderNotFound:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
     return order
 
@@ -43,7 +43,7 @@ def get_order_payments(
             session=session, 
             order_id=id
         )
-    except OrderNotFound as e:
+    except OrderNotFound:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
     return order
 
@@ -62,7 +62,7 @@ async def get_orders_customer(
     try:
         orders = await order_service.read_orders_from_customer(session=session, customer_id=id)
         return orders
-    except UserNotFoundException as e: 
+    except UserNotFoundException: 
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="User not found")
 
 @router.post("/", status_code=201)
@@ -73,7 +73,7 @@ async def create_order(
     try: 
         order = await order_service.create_order(session, order_request)
         return order
-    except ProductNotFoundException as e: 
+    except ProductNotFoundException: 
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Product not found")
 
 @router.patch("/{order_id}/")
@@ -85,7 +85,7 @@ async def update_order(
     try: 
         order = await order_service.update_order(session=session, order=order_data, order_id=order_id)
         return order
-    except OrderNotFound as e: 
+    except OrderNotFound: 
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
 
 @router.patch("/{id}/status/")
@@ -97,7 +97,7 @@ def update_status(
     try: 
         order = order_service.update_order_status(session=session, status_update=status_request, order_id=id)
         return order
-    except OrderNotFound as e:
+    except OrderNotFound:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")
     
 @router.delete("/{id}/")
@@ -108,5 +108,5 @@ def delete_order(
     try: 
         order_service.delete_order(session=session, order_id=id)
         return Message(message="Order deleted successfully")
-    except OrderNotFound as e:
+    except OrderNotFound:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Order not found")

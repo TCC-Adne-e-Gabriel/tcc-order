@@ -22,7 +22,7 @@ def get_payment_by_id(
 ) -> PaymentResponse:
     try: 
         return payment_service.read_payment_from_id(session, id)
-    except PaymentNotFoundException as e: 
+    except PaymentNotFoundException: 
         raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
 
 @router.get("/")
@@ -43,9 +43,9 @@ async def create_payment(
             payment=payment_request
         )
         return payment
-    except OrderNotFound as e:
+    except OrderNotFound:
         raise HTTPException(HTTPStatus.NOT_FOUND, detail="Order not found")
-    except UserNotFoundException as e:
+    except UserNotFoundException:
         raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
 
 
@@ -57,7 +57,7 @@ async def confirm_payment(
     try:
         new_status = PaymentUpdateRequest(status=PaymentStatusEnum.paid)
         return payment_service.update_payment(session=session, payment=new_status, payment_id=id)
-    except PaymentNotFoundException as e:
+    except PaymentNotFoundException:
         raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
     
 @router.patch("/{id}/cancel/")
@@ -68,7 +68,7 @@ async def confirm_payment(
     try:
         new_status = PaymentUpdateRequest(status=PaymentStatusEnum.cancelled)
         return payment_service.update_payment(session=session, payment=new_status, payment_id=id)
-    except PaymentNotFoundException as e:
+    except PaymentNotFoundException:
         raise HTTPException(HTTPStatus.NOT_FOUND, detail="Payment not found")
     
 @router.get("/order/{order_id}/")
@@ -78,6 +78,6 @@ async def get_payments_from_order(
 ):
     try:
         return payment_service.read_order_payments(session=session, order_id=order_id)
-    except OrderNotFound as e:
+    except OrderNotFound:
         raise HTTPException(HTTPStatus.NOT_FOUND, detail="Order not found")
     
