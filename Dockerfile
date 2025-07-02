@@ -19,4 +19,4 @@ COPY app/ ./app/
 COPY scripts/ ./scripts/
 COPY .env .env
 
-CMD ["fastapi", "run", "--workers", "4", "app/main.py"]
+CMD ["fastapi", "run", "--workers", "4", "--host", "0.0.0.0","app/main.py"]
