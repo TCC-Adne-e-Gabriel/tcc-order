@@ -13,7 +13,7 @@ class ProductClient():
                 settings.PRODUCT_API + f"/product/{product_id}"
             )
             if(response.status_code == HTTPStatus.NOT_FOUND):
-                raise ProductNotFoundException()
+                raise ProductNotFoundException
             payload = UpdateQuantityRequest(quantity=quantity)
             await client.patch(
                 url=settings.PRODUCT_API + f"/product/{product_id}", 

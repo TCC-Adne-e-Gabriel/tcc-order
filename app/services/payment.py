@@ -5,7 +5,6 @@ from app.schemas.payment import (
     PaymentUpdateRequest
 )
 from sqlmodel import Session, select
-from app.core.encrypt import encrypt_data
 from uuid import UUID
 from app.services.order import OrderService
 from app.clients.customer_client import CustomerClient

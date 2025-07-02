@@ -13,14 +13,14 @@ from uuid import UUID
 from app.exceptions import OrderNotFound, OrderProductException
 from app.clients.customer_client import CustomerClient
 from app.clients.product_client import ProductClient
-
+from http import HTTPStatus
 
 class OrderService():
     def __init__(self):
         self.customer_client = CustomerClient()
         self.product_client = ProductClient()
 
-    async def create_order(self, session: Session, order: OrderCreateRequest) -> OrderResponse:
+    async def create_order(self, session: Session, order: OrderCreateRequest, customer_id: UUID) -> OrderResponse:
         total_price = 0
         order_products = []
         products = []
@@ -38,6 +38,7 @@ class OrderService():
         order_data = order.model_dump()
         order_data["total_price"] = total_price
         order_data["products"] = order_products
+        order_data["customer_id"] = customer_id
         db_order = Order(**order_data)
         session.add(db_order)
         session.commit()
