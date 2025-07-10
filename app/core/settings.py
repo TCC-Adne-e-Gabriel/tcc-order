@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     CUSTOMER_API_KEY: str = ""
     SECRET_KEY: str = ""
     ALGORITHM: str = ""
-    ACCESS_TOKEN_EXPIRE_DAYS: int
+    ACCESS_TOKEN_EXPIRE_DAYS: int = 0
     CUSTOMER_API_KEY: str = ""
     CUSTOMER_API: str = ""
     PRODUCT_API: str = ""

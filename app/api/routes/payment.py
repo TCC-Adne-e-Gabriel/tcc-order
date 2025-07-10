@@ -3,7 +3,6 @@ from app.services.payment_mock import PaymentMockService
 from uuid import UUID
 from typing import List
 from app.services.payment import PaymentService
-from app.exceptions import PaymentNotFoundException, UserNotFoundException, OrderNotFound
 from app.schemas.payment import PaymentResponse, PaymentCreateRequest, PaymentUpdateRequest
 from app.models.payment import PaymentStatusEnum
 from app.deps import SessionDep

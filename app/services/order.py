@@ -10,10 +10,9 @@ from app.schemas.order import (
 from sqlmodel import Session, select
 from typing import List
 from uuid import UUID
-from app.exceptions import OrderNotFound, OrderProductException
+from app.exceptions import OrderNotFoundException, OrderProductException
 from app.clients.customer_client import CustomerClient
 from app.clients.product_client import ProductClient
-from http import HTTPStatus
 
 class OrderService():
     def __init__(self):
@@ -83,7 +82,7 @@ class OrderService():
         order = self.get_by_id(session, order_id)
         products = await self.read_products_from_order(order)
         if not order:
-            raise OrderNotFound
+            raise OrderNotFoundException
         return OrderResponse.from_order(order, products)
 
     async def read_orders(self, session: Session) -> List[OrderResponse]: 
