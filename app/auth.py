@@ -12,10 +12,10 @@ from typing import List
 from app.clients.customer_client import CustomerClient
 from app.schemas.auth import TokenData
 
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 settings = Settings()
 customer_client = CustomerClient()
-
         
 def get_current_customer_data(token: str = Depends(oauth2_scheme)) -> TokenData:
     try:

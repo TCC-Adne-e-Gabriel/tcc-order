@@ -13,6 +13,7 @@ from uuid import UUID
 from app.exceptions import OrderNotFoundException, OrderProductException
 from app.clients.customer_client import CustomerClient
 from app.clients.product_client import ProductClient
+from app.order_logging import logger
 
 class OrderService():
     def __init__(self):
@@ -42,6 +43,7 @@ class OrderService():
         session.add(db_order)
         session.commit()
         session.refresh(db_order)
+        logger.audit(f"Order {db_order.id} created")
         return OrderResponse.from_order(db_order, products)
     
     async def read_products_from_order(self, current_order: Order) -> List[Product]:
@@ -59,6 +61,7 @@ class OrderService():
         session.add(current_order)
         session.commit()
         session.refresh(current_order)
+        logger.audit(f"Order {current_order.id} updated")
         return OrderResponse.from_order(current_order, products)
     
     async def to_response_schema(self, orders) -> List[OrderResponse]: 
@@ -72,22 +75,28 @@ class OrderService():
     async def read_customer_orders(self, session: Session, customer_id: UUID) -> List[OrderResponse]: 
         await self.customer_client.read_user_by_id(str(customer_id))
         orders = session.exec(select(Order).where(Order.customer_id == customer_id))
+        logger.audit(f"Orders from {customer_id} read")
         return await self.to_response_schema(orders)
 
     def get_by_id(self, session: Session, order_id: UUID) -> Order: 
         statement = select(Order).where(Order.id == order_id)
-        return session.exec(statement).first()
+        result = session.exec(statement).first()
+        
+        return result
 
     async def read_order_by_id(self, session: Session, order_id: UUID) -> OrderResponse: 
         order = self.get_by_id(session, order_id)
         products = await self.read_products_from_order(order)
         if not order:
             raise OrderNotFoundException
+        logger.audit(f"Order {order.id} read")
         return OrderResponse.from_order(order, products)
 
     async def read_orders(self, session: Session) -> List[OrderResponse]: 
         statement = select(Order)
         orders = session.exec(statement)
+
+        logger.audit(f"Orders read")
         return await self.to_response_schema(orders)
 
     def delete_order(self, session: Session, order_id):
@@ -100,6 +109,7 @@ class OrderService():
 
         session.delete(current_order)
         session.commit()
+        logger.audit(f"Order {order_id} deleted")
 
     def update_order_status(self, session: Session, status_update: OrderStatusUpdate, order_id: UUID) -> OrderSimpleResponse:
         current_order = self.get_by_id(session, order_id)
@@ -108,4 +118,5 @@ class OrderService():
         session.add(current_order)
         session.commit()
         session.refresh(current_order)
+        logger.audit(f"Order status {order_id} updated")
         return current_order

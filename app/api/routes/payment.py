@@ -8,6 +8,7 @@ from app.models.payment import PaymentStatusEnum
 from app.deps import SessionDep
 from app import auth
 from app.schemas.auth import TokenData
+from app.context import user_id_context
 
 
 app = FastAPI()
@@ -15,18 +16,22 @@ router = APIRouter(prefix="/payment")
 payment_mock = PaymentMockService()
 payment_service = PaymentService()
 
-@router.get("/{id}/", response_model=PaymentResponse, dependencies=[Depends(auth.role_required(["admin"]))])
+@router.get("/{id}/", response_model=PaymentResponse)
 def get_payment_by_id(
     id: UUID, 
-    session: SessionDep
-) -> PaymentResponse:
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["admin"]))
+):
+    user_id_context.set(decoded_token.id)
     return payment_service.read_payment_from_id(session, id)
 
 
-@router.get("/", response_model=List[PaymentResponse], dependencies=[Depends(auth.role_required(["admin"]))])
+@router.get("/", response_model=List[PaymentResponse])
 def get_payments(
-    session: SessionDep
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["admin"]))
 ):
+    user_id_context.set(decoded_token.id)
     payments = payment_service.read_payments(session)
     return payments
 
@@ -35,38 +40,45 @@ def get_payments(
 async def create_payment(
     payment_request: PaymentCreateRequest,
     session: SessionDep,
-    token_data: TokenData = Depends(auth.role_required(["user"]))
+    decoded_token: TokenData = Depends(auth.role_required(["user"]))
 ): 
+    user_id_context.set(decoded_token.id)
     payment = await payment_service.create_payment(
         session=session, 
         payment=payment_request, 
-        customer_id=token_data.id
+        customer_id=decoded_token.id
     )
     return payment
 
 
-@router.patch("/{id}/confirm/", response_model=PaymentResponse, dependencies=[Depends(auth.role_required(["service", "admin"]))])
+@router.patch("/{id}/confirm/", response_model=PaymentResponse)
 async def confirm_payment(
     id,
-    session: SessionDep
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["service", "admin"]))
 ):
+    user_id_context.set(decoded_token.id)
     new_status = PaymentUpdateRequest(status=PaymentStatusEnum.paid)
     return payment_service.update_payment(session=session, payment=new_status, payment_id=id)
 
 
-@router.patch("/{id}/cancel/", response_model=PaymentResponse,dependencies=[Depends(auth.role_required(["admin", "service"]))])
+@router.patch("/{id}/cancel/", response_model=PaymentResponse)
 async def confirm_payment(
     id: UUID,
-    session: SessionDep
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["service", "admin"]))
 ):
+    user_id_context.set(decoded_token.id)
     new_status = PaymentUpdateRequest(status=PaymentStatusEnum.cancelled)
     return payment_service.update_payment(session=session, payment=new_status, payment_id=id)
 
 
-@router.get("/order/{order_id}/", response_model=List[PaymentResponse], dependencies=[Depends(auth.role_required(["user", "admin"]))])
+@router.get("/order/{order_id}/", response_model=List[PaymentResponse])
 async def get_payments_from_order(
     order_id: UUID,
-    session: SessionDep
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["service", "admin"]))
 ):
+    user_id_context.set(decoded_token.id)
     return payment_service.read_order_payments(session=session, order_id=order_id)
     

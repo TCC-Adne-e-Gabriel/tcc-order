@@ -13,6 +13,7 @@ from app.deps import SessionDep
 from app.services.order import OrderService
 from app.services.payment import PaymentService
 from app import auth
+from app.context import user_id_context
 from app.schemas.auth import TokenData
 
 app = FastAPI()
@@ -51,7 +52,7 @@ async def get_orders(
 async def get_orders_customer(
     id: UUID,
     session: SessionDep
-) -> List[OrderResponse]:
+):
     orders = await order_service.read_orders_from_customer(session=session, customer_id=id)
     return orders
 
@@ -67,33 +68,40 @@ async def get_orders_current_customer(
 async def create_order(
     order_request: OrderCreateRequest,
     session: SessionDep, 
-    token_data: TokenData = Depends(auth.role_required(["admin", "user"]))
-) -> OrderResponse:
-    order = await order_service.create_order(session, order_request, token_data.id)
+    decoded_token: TokenData = Depends(auth.role_required(["admin", "user"]))
+):
+    user_id_context.set(decoded_token.id)
+    order = await order_service.create_order(session, order_request, decoded_token.id)
     return order
 
-@router.patch("/{order_id}/", response_model=OrderResponse, dependencies=[Depends(auth.role_required(["user", "admin"]))])
+@router.patch("/{order_id}/", response_model=OrderResponse)
 async def update_order(
     order_id: UUID,
     order_data: OrderUpdateRequest,
-    session: SessionDep
-) -> OrderResponse:
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["service", "admin"]))
+):
+    user_id_context.set(decoded_token.id)
     order = await order_service.update_order(session=session, order=order_data, order_id=order_id)
     return order
 
-@router.patch("/{id}/status/", response_model=OrderSimpleResponse, dependencies=[Depends(auth.role_required(["admin"]))])
+@router.patch("/{id}/status/", response_model=OrderSimpleResponse)
 def update_status(
     id,
     status_request: OrderStatusUpdate,
-    session: SessionDep
-) -> OrderSimpleResponse:
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["admin"]))
+):
+    user_id_context.set(decoded_token.id)
     order = order_service.update_order_status(session=session, status_update=status_request, order_id=id)
     return order
     
-@router.delete("/{id}/", response_model=Message, dependencies=[Depends(auth.role_required(["admin"]))])
+@router.delete("/{id}/", response_model=Message)
 def delete_order(
     id, 
-    session: SessionDep
+    session: SessionDep, 
+    decoded_token = Depends(auth.role_required(["admin"]))
 ):
+    user_id_context.set(decoded_token.id)
     order_service.delete_order(session=session, order_id=id)
     return Message(message="Order deleted successfully")
