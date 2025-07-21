@@ -30,7 +30,7 @@ async def get_order_by_id(
     order = await order_service.read_order_by_id(session=session, order_id=id)
     return order
 
-@router.get("/{id}/payments", response_model=OrderResponse, dependencies=[Depends(auth.role_required(["admin", "user"]))])
+@router.get("/{id}/payments/", response_model=OrderResponse, dependencies=[Depends(auth.role_required(["admin", "user"]))])
 def get_order_payments(
     id: UUID, 
     session: SessionDep
@@ -48,7 +48,7 @@ async def get_orders(
     orders = await order_service.read_orders(session)
     return orders
 
-@router.get("/customer/{id}", response_model=List[OrderResponse], dependencies=[Depends(auth.role_required(["admin"]))])
+@router.get("/customer/{id}/", response_model=List[OrderResponse], dependencies=[Depends(auth.role_required(["admin"]))])
 async def get_orders_customer(
     id: UUID,
     session: SessionDep
