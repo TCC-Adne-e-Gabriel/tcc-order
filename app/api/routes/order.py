@@ -22,6 +22,14 @@ order_service = OrderService()
 payment_service = PaymentService()
 
 
+@router.get("/me/", response_model=List[OrderResponse])
+async def get_orders_current_customer(
+    session: SessionDep,
+    token_data: TokenData = Depends(auth.role_required(["admin", "user"]))
+) -> List[OrderResponse]:
+    orders = await order_service.read_customer_orders(session=session, customer_id=token_data.id)
+    return orders
+
 @router.get("/{id}/", response_model=OrderResponse, dependencies=[Depends(auth.role_required(["admin", "user"]))])
 async def get_order_by_id(
     id: UUID, 
@@ -35,7 +43,7 @@ def get_order_payments(
     id: UUID, 
     session: SessionDep
 ):
-    order = payment_service.read_payments_from_order(
+    order = payment_service.read_order_payments(
         session=session, 
         order_id=id
     )
@@ -53,16 +61,9 @@ async def get_orders_customer(
     id: UUID,
     session: SessionDep
 ):
-    orders = await order_service.read_orders_from_customer(session=session, customer_id=id)
+    orders = await order_service.read_customer_orders(session=session, customer_id=id)
     return orders
 
-@router.get("/me/", response_model=List[OrderResponse])
-async def get_orders_current_customer(
-    session: SessionDep,
-    token_data: TokenData = Depends(auth.role_required(["admin", "user"]))
-) -> List[OrderResponse]:
-    orders = await order_service.read_orders_from_customer(session=session, customer_id=token_data.id)
-    return orders
 
 @router.post("/", status_code=201, response_model=OrderResponse)
 async def create_order(

@@ -73,7 +73,7 @@ class OrderService():
         return orders_response
 
     async def read_customer_orders(self, session: Session, customer_id: UUID) -> List[OrderResponse]: 
-        await self.customer_client.read_user_by_id(str(customer_id))
+        await self.customer_client.fetch_user(str(customer_id))
         orders = session.exec(select(Order).where(Order.customer_id == customer_id))
         logger.audit(f"Orders from {customer_id} read")
         return await self.to_response_schema(orders)
